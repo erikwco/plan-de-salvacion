@@ -1,0 +1,43 @@
+{
+  "model": "music_v2_5",
+  "duck_db": 12,
+  "negative_styles": ["vocals", "choir", "humming", "drums", "percussion", "electronic synths", "sudden loud hits"],
+  "sections": [
+    {
+      "text": "[El amor de Dios]",
+      "level_db": 0,
+      "scenes": ["titulo", "mundo", "hijo", "cruz", "vida", "abundancia"],
+      "styles": ["70 BPM", "warm hopeful opening", "gentle solo piano arpeggios", "soft string ensemble entering gradually", "tender melodic lead on piano", "major key", "wide warm reverb", "slow swelling dynamics"]
+    },
+    {
+      "text": "[El problema del pecado]",
+      "level_db": -1.5,
+      "scenes": ["pecado", "separacion"],
+      "styles": ["70 BPM", "somber and sparse", "isolated low piano notes", "thin cello and viola sustains", "minor key", "restrained quiet tension", "lots of space between notes"]
+    },
+    {
+      "text": "[La solución de Dios]",
+      "level_db": 1,
+      "scenes": ["puente", "camino"],
+      "styles": ["70 BPM", "rising hope", "piano motif climbing upward", "strings rising in long lines", "harmony lifting from minor to major", "gradual gentle crescendo", "cinematic but soft"]
+    },
+    {
+      "text": "[La decisión personal]",
+      "level_db": 0,
+      "scenes": ["regalo", "puerta"],
+      "styles": ["70 BPM", "warm and inviting", "fuller piano voicings", "lush sustained strings", "major key", "tender and embracing", "moderate quiet dynamics"]
+    },
+    {
+      "text": "[Oración de entrega]",
+      "level_db": -4,
+      "scenes": ["oracion"],
+      "styles": ["66 BPM", "very soft and intimate", "slow sparse piano chords", "barely audible sustained strings bed", "prayerful stillness", "major key", "pianissimo throughout"]
+    },
+    {
+      "text": "[Amén]",
+      "level_db": 1,
+      "scenes": ["amen"],
+      "styles": ["66 BPM", "luminous resolution", "piano and strings resolving to the tonic", "gentle swell then fade to silence", "major key", "peaceful ending"]
+    }
+  ]
+}

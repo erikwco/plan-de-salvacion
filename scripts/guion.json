@@ -1,0 +1,56 @@
+{
+  "model": "eleven_v4",
+  "voice": "YSd4u2xUp0Mb2ceRmD3E",
+  "scenes": [
+    { "id": "titulo", "parts": [{ "line": "El Plan de Salvación", "say": "El Plan de Salvación." }] },
+    { "id": "mundo", "parts": [
+      { "mark": "mundo-step", "say": "El amor y el plan de Dios." },
+      { "line": "Porque de tal manera amó Dios al mundo," }
+    ] },
+    { "id": "hijo", "parts": [{ "line": "que ha dado a su Hijo unigénito," }] },
+    { "id": "cruz", "parts": [{ "line": "para que todo aquel que en él cree, no se pierda," }] },
+    { "id": "vida", "parts": [
+      { "line": "mas tenga vida eterna." },
+      { "mark": "vida-ref", "say": "Juan tres, dieciséis." }
+    ] },
+    { "id": "abundancia", "parts": [
+      { "line": "Yo he venido para que tengan vida, y para que la tengan en abundancia." },
+      { "mark": "abundancia-cite", "say": "Juan diez, diez." }
+    ] },
+    { "id": "pecado", "parts": [
+      { "mark": "pecado-step", "say": "El problema del pecado." },
+      { "line": "Por cuanto todos pecaron, y están destituidos de la gloria de Dios." },
+      { "mark": "pecado-cite", "say": "Romanos tres, veintitrés." }
+    ] },
+    { "id": "separacion", "parts": [
+      { "line": "Vuestras iniquidades han hecho división entre vosotros y vuestro Dios." },
+      { "mark": "separacion-cite", "say": "Isaías cincuenta y nueve, dos." }
+    ] },
+    { "id": "puente", "parts": [
+      { "mark": "puente-step", "say": "La solución de Dios." },
+      { "line": "Mas Dios muestra su amor para con nosotros, en que siendo aún pecadores, Cristo murió por nosotros." },
+      { "mark": "puente-cite", "say": "Romanos cinco, ocho." }
+    ] },
+    { "id": "camino", "parts": [
+      { "line": "Yo soy el camino, y la verdad, y la vida; nadie viene al Padre, sino por mí." },
+      { "mark": "camino-cite", "say": "Juan catorce, seis." }
+    ] },
+    { "id": "regalo", "parts": [
+      { "mark": "regalo-step", "say": "La decisión personal." },
+      { "line": "Porque por gracia sois salvos por medio de la fe; y esto no de vosotros, pues es don de Dios; no por obras." },
+      { "mark": "regalo-cite", "say": "Efesios dos, ocho y nueve." }
+    ] },
+    { "id": "puerta", "parts": [
+      { "line": "He aquí, yo estoy a la puerta y llamo; si alguno oye mi voz y abre la puerta, entraré a él." },
+      { "mark": "puerta-cite", "say": "Apocalipsis tres, veinte." }
+    ] },
+    { "id": "oracion", "pause": 1.2, "parts": [
+      { "mark": "oracion-step", "say": "Oración de entrega." },
+      { "line": "Señor Jesús, yo te recibo hoy como mi único y suficiente salvador personal," },
+      { "line": "Creo que eres Dios, que moriste en la cruz y que resucitaste al tercer día," },
+      { "line": "Me arrepiento, soy pecador, perdóname Señor," },
+      { "line": "Gracias doy al Padre por enviar a su hijo Jesucristo a morir en mi lugar," }
+    ] },
+    { "id": "amen", "parts": [{ "line": "En Cristo Jesús mi Salvador, Amén", "say": "En Cristo Jesús mi Salvador. Amén." }] }
+  ]
+}

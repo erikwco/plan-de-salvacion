@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El Plan de Salvación</title>
+<style>
+  @font-face { font-family:"Patrick Hand"; font-style:normal; font-weight:400; font-display:swap; src:url(/fonts/patrick-hand-400.woff2) format("woff2"); }
+  :root { --ground:#F4ECD8; --main:#2B4C7E; --second:#2A2622; --accent:#D9822B; }
+  /* ---------- Reproductor (escala el lienzo de 1920×1080 a cualquier tamaño) ---------- */
+  html, body { margin:0; height:100%; background:var(--ground); }
+  #player { position:relative; width:100%; height:100%; overflow:hidden; background:var(--ground); user-select:none; -webkit-user-select:none; }
+  #frame { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0; }
+  #stage { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden;
+    --display:"Patrick Hand", "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+    --serif:Georgia, "Times New Roman", serif;
+    color:var(--second); font-family:var(--serif); }
+  .scene { position:absolute; inset:0; display:none } .scene.on { display:block }
+
+  /* ---------- Estilo de la película (papel y tinta) ---------- */
+  .ground { position:absolute; inset:0; background:radial-gradient(130% 110% at 50% 45%, var(--ground) 55%, color-mix(in srgb, var(--ground) 88%, var(--second))) }
+  .words { position:absolute; margin:0; display:flex; flex-direction:column; gap:22px } .words > * { margin:0 }
+  .line { font-family:var(--display); font-size:92px; line-height:1.12; font-weight:400 } .sub { font-size:34px; letter-spacing:.08em }
+  .line.long { font-size:70px; line-height:1.14 }
+  .sub { color:color-mix(in srgb, var(--second) 68%, var(--ground)); text-transform:uppercase }
+  .ref { font-family:var(--display); font-size:46px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent) }
+  .step { font-family:var(--display); font-size:32px; letter-spacing:.14em; text-transform:uppercase; color:var(--main) }
+  .cite { font-family:var(--display); font-size:32px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent) }
+  .pray { font-family:var(--display); font-size:74px; line-height:1.2; font-weight:400 }
+  .art { position:absolute; inset:0; width:100%; height:100%; overflow:visible }
+  .ink { fill:none; stroke:var(--second); stroke-width:6; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:1 1 }
+  .ink.thin { stroke-width:3.5 } .ink.bold { stroke-width:10 } .ink.blue { stroke:var(--main) } .ink.warm { stroke:var(--accent) }
+  .wash { stroke:none; fill:color-mix(in srgb, var(--main) 38%, var(--ground)) }
+  .wash.warm { fill:color-mix(in srgb, var(--accent) 52%, var(--ground)) }
+  .wash.soft { fill:color-mix(in srgb, var(--main) 16%, var(--ground)) }
+  .wash.sun { fill:color-mix(in srgb, var(--accent) 34%, var(--ground)) }
+  .hatch { fill:none; stroke:color-mix(in srgb, var(--second) 55%, var(--ground)); stroke-width:2.5; stroke-linecap:round; stroke-dasharray:1 1 }
+  .rule { position:absolute; height:5px; border-radius:3px; background:var(--accent); transform-origin:0 50% }
+  .glow { position:absolute; inset:0; background:radial-gradient(55% 55% at 50% 45%, color-mix(in srgb, var(--accent) 30%, transparent), transparent) }
+
+  /* ---------- Controles ---------- */
+  #big { position:absolute; left:50%; top:50%; width:110px; height:110px; margin:-55px 0 0 -55px; border:none; border-radius:50%; cursor:pointer;
+    background:var(--second); color:var(--ground); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 24px rgba(0,0,0,.25); transition:opacity .25s, transform .25s; }
+  #big:hover { transform:scale(1.06) } #big.hide { opacity:0; pointer-events:none }
+  #big svg { width:44px; height:44px; margin-left:6px }
+  #ctl { position:absolute; left:0; right:0; bottom:0; height:44px; display:flex; align-items:center; gap:10px; padding:0 12px; box-sizing:border-box;
+    background:linear-gradient(to top, rgba(42,38,34,.55), rgba(42,38,34,0)); opacity:0; transition:opacity .3s; font:14px/1 system-ui, sans-serif; color:#F4ECD8; }
+  #player:hover #ctl, #player.paused #ctl, #player.touch #ctl { opacity:1 }
+  #ctl button { background:none; border:none; color:inherit; cursor:pointer; width:28px; height:28px; padding:0; display:flex; align-items:center; justify-content:center }
+  #ctl button svg { width:18px; height:18px; fill:currentColor }
+  #bar { flex:1; height:18px; position:relative; cursor:pointer }
+  #bar::before { content:""; position:absolute; left:0; right:0; top:7px; height:4px; border-radius:2px; background:rgba(244,236,216,.35) }
+  #fill { position:absolute; left:0; top:7px; height:4px; border-radius:2px; background:#D9822B; width:0 }
+  .tick { position:absolute; top:5px; width:2px; height:8px; background:rgba(244,236,216,.6) }
+  #time { font-variant-numeric:tabular-nums; min-width:76px; text-align:right; opacity:.9 }
+</style>
+</head>
+<body>
+<div id="player" class="paused">
+  <div id="frame"><div id="stage"></div></div>
+  <button id="big" aria-label="Reproducir"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l15 9-15 9z"/></svg></button>
+  <div id="ctl">
+    <button id="pp" aria-label="Reproducir / pausar"><svg viewBox="0 0 24 24"><path d="M5 3l15 9-15 9z"/></svg></button>
+    <div id="bar" aria-label="Línea de tiempo"><div id="fill"></div></div>
+    <span id="time">0:00 / 0:00</span>
+  </div>
+</div>
+<noscript><p style="font:18px Georgia,serif;padding:24px">Esta animación necesita JavaScript.</p></noscript>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN
+   - AUDIO_SRC: ruta a un .mp3/.ogg con la narración y/o música (opcional).
+     El audio se reproduce y se adelanta en sincronía con la animación.
+   - AUTOPLAY: true para arrancar solo (los navegadores lo permiten si no hay audio).
+   - SYNC: la narración y sus tiempos. Lo escribe scripts/narracion.py;
+     no se edita a mano.
+   ===================================================================== */
+/* NARRACION:INICIO */
+const SYNC = {"scenes":{"titulo":{"dur":3.2,"anchors":[[0,0],[3.2,3.0]],"marks":{}},"mundo":{"dur":7.2,"anchors":[[0,0],[7.2,5.0]],"marks":{"mundo-step":0.4}},"hijo":{"dur":5.5,"anchors":[[0,0],[5.5,5.5]],"marks":{}},"cruz":{"dur":5.2,"anchors":[[0,0],[5.2,5.0]],"marks":{}},"vida":{"dur":6.0,"anchors":[[0,0],[6.0,4.5]],"marks":{"vida-ref":2.88}},"abundancia":{"dur":8.4,"anchors":[[0,0],[8.4,6.0]],"marks":{"abundancia-cite":5.68}},"pecado":{"dur":11.28,"anchors":[[0,0],[11.28,6.0]],"marks":{"pecado-step":0.4,"pecado-cite":7.76}},"separacion":{"dur":9.28,"anchors":[[0,0],[9.28,6.0]],"marks":{"separacion-cite":5.28}},"puente":{"dur":13.12,"anchors":[[0,0],[13.12,7.0]],"marks":{"puente-step":0.4,"puente-cite":10.16}},"camino":{"dur":10.16,"anchors":[[0,0],[10.16,7.0]],"marks":{"camino-cite":7.12}},"regalo":{"dur":14.8,"anchors":[[0,0],[14.8,8.0]],"marks":{"regalo-step":0.4,"regalo-cite":11.2}},"puerta":{"dur":11.6,"anchors":[[0,0],[11.6,7.5]],"marks":{"puerta-cite":8.08}},"oracion":{"dur":29.68,"anchors":[[0,0],[2.74,0.3],[10.18,5.6],[10.58,6.0],[17.22,11.3],[17.62,11.7],[22.74,15.7],[23.14,16.1],[28.98,20.6],[29.68,21.0]],"marks":{"oracion-step":0.4}},"amen":{"dur":5.0,"anchors":[[0,0],[5.0,5.0]],"marks":{}}},"words":{"El Plan de Salvación":[0.4,0.72,1.04,1.12],"Porque de tal manera amó Dios al mundo,":[3.16,3.48,3.72,3.96,4.44,4.72,5.04,5.24],"que ha dado a su Hijo unigénito,":[0.4,0.56,0.72,1.0,1.12,1.28,1.68],"para que todo aquel que en él cree, no se pierda,":[0.4,0.72,0.96,1.28,1.68,1.84,2.04,2.2,2.88,3.04,3.28],"mas tenga vida eterna.":[0.4,0.72,1.28,1.6],"Yo he venido para que tengan vida, y para que la tengan en abundancia.":[0.4,0.68,0.8,1.28,1.48,1.68,2.16,2.96,3.12,3.28,3.4,3.6,4.08,4.24],"Por cuanto todos pecaron, y están destituidos de la gloria de Dios.":[2.84,3.0,3.6,3.84,4.64,4.72,5.12,5.92,6.04,6.16,6.56,6.68],"Vuestras iniquidades han hecho división entre vosotros y vuestro Dios.":[0.4,0.96,1.76,1.92,2.16,2.84,3.04,3.76,3.84,4.24],"Mas Dios muestra su amor para con nosotros, en que siendo aún pecadores, Cristo murió por nosotros.":[2.8,3.12,3.52,3.92,4.08,4.4,4.64,4.8,5.84,6.0,6.16,6.52,6.84,7.8,8.24,8.64,8.8],"Yo soy el camino, y la verdad, y la vida; nadie viene al Padre, sino por mí.":[0.4,0.72,0.96,1.16,1.88,2.0,2.2,2.84,2.96,3.12,4.08,4.56,4.88,5.08,5.56,5.92,6.16],"Porque por gracia sois salvos por medio de la fe; y esto no de vosotros, pues es don de Dios; no por obras.":[2.64,3.04,3.2,3.68,4.0,4.48,4.72,5.08,5.2,5.36,6.08,6.24,6.8,6.92,7.04,7.96,8.24,8.56,8.84,8.96,9.84,10.0,10.24],"He aquí, yo estoy a la puerta y llamo; si alguno oye mi voz y abre la puerta, entraré a él.":[0.4,0.72,1.44,1.72,1.96,2.04,2.24,2.8,2.88,3.88,4.0,4.48,4.8,5.0,5.32,5.44,5.76,5.88,6.64,7.2,7.36],"Señor Jesús, yo te recibo hoy como mi único y suficiente salvador personal,":[3.04,3.44,4.72,4.88,5.04,5.6,5.92,6.28,6.48,6.96,7.08,7.96,8.48],"Creo que eres Dios, que moriste en la cruz y que resucitaste al tercer día,":[10.88,11.28,11.44,11.84,12.8,13.0,13.44,13.56,13.68,14.32,14.48,14.64,15.44,15.6,15.92],"Me arrepiento, soy pecador, perdóname Señor,":[17.92,18.08,19.36,19.68,20.76,21.44],"Gracias doy al Padre por enviar a su hijo Jesucristo a morir en mi lugar,":[23.44,24.0,24.24,24.52,24.88,25.04,25.48,25.6,25.76,26.0,26.96,27.16,27.44,27.56,27.68],"En Cristo Jesús mi Salvador, Amén":[0.4,0.64,1.04,1.52,1.68,2.92]}};
+/* NARRACION:FIN */
+const AUDIO_SRC = SYNC ? '/narracion.mp3' : '';
+const PARAMS = new URLSearchParams(location.search);
+const AUTOPLAY = PARAMS.get('autoplay') === '1';
+
+/* ---------- Tonalidades (?tema=…): solo cambian los colores, nunca las escenas ---------- */
+const THEMES = {
+  noche: { '--ground': '#171A22', '--main': '#8FB1E3', '--second': '#EFE6D2', '--accent': '#F2A24E' },
+  amanecer: { '--ground': '#FBF1E4', '--main': '#7A3E2F', '--second': '#2B201B', '--accent': '#E0612C' },
+  olivo: { '--ground': '#EFF0E2', '--main': '#3F5B3A', '--second': '#23271F', '--accent': '#C0892F' },
+};
+for (const [name, value] of Object.entries(THEMES[PARAMS.get('tema')] ?? {})) document.documentElement.style.setProperty(name, value);
+
+/* ---------- Escenas (orden y duración en segundos) ---------- */
+const SCENES = [
+  { id: 'titulo', name: 'Título', dur: 3 },
+  { id: 'mundo', name: 'El mundo', dur: 5 },
+  { id: 'hijo', name: 'Su Hijo', dur: 5.5 },
+  { id: 'cruz', name: 'La cruz', dur: 5 },
+  { id: 'vida', name: 'Vida eterna', dur: 4.5 },
+  { id: 'abundancia', name: 'Vida abundante', dur: 6 },
+  { id: 'pecado', name: 'Todos pecaron', dur: 6 },
+  { id: 'separacion', name: 'La separación', dur: 6 },
+  { id: 'puente', name: 'La cruz como puente', dur: 7 },
+  { id: 'camino', name: 'El camino', dur: 7 },
+  { id: 'regalo', name: 'El regalo', dur: 8 },
+  { id: 'puerta', name: 'La puerta', dur: 7.5 },
+  { id: 'oracion', name: 'Oración de entrega', dur: 21 },
+  { id: 'amen', name: 'Amén', dur: 5 },
+];
+if (SYNC) for (const s of SCENES) s.dur = SYNC.scenes[s.id].dur;
+
+/* ---------- Mini "kit": utilidades puras en función del tiempo ---------- */
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+let REAL = 0;
+const warp = (anchors, x) => {
+  for (let i = 1; i < anchors.length; i++) {
+    const [r0, o0] = anchors[i - 1], [r1, o1] = anchors[i];
+    if (x <= r1) return o0 + (o1 - o0) * clamp01((x - r0) / (r1 - r0));
+  }
+  return anchors[anchors.length - 1][1];
+};
+const seg = (t, a, b) => clamp01((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const eo = x => 1 - Math.pow(1 - x, 3);
+const ei = x => x * x * x;
+const eio = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eob = (x, o = 1.4) => 1 + (o + 1) * Math.pow(x - 1, 3) + o * Math.pow(x - 1, 2);
+const breathe = (t, amt = 0.012, period = 3.2) => 1 + amt * Math.sin(2 * Math.PI * t / period);
+const TextFx = {
+  fadeFromRight(el, t, t0, o = {}) {
+    const stagger = o.stagger ?? 0.11, dur = o.dur ?? 0.5, dx = o.dx ?? 26;
+    if (!el._words) {
+      el._text = el.textContent.trim();
+      const words = el._text.split(/\s+/);
+      el.textContent = '';
+      el._words = words.map((w, i) => {
+        const s = document.createElement('span');
+        s.textContent = w; s.style.display = 'inline-block';
+        el.appendChild(s);
+        if (i < words.length - 1) el.appendChild(document.createTextNode(' '));
+        return s.style;
+      });
+    }
+    const times = SYNC && SYNC.words[el._text];
+    el._words.forEach((s, i) => {
+      const p = times ? eo(seg(REAL, times[i] - 0.12, times[i] + 0.23)) : eo(seg(t, t0 + i * stagger, t0 + i * stagger + dur));
+      s.opacity = p; s.transform = 'translateX(' + (dx * (1 - p)) + 'px)';
+    });
+    return t0 + (el._words.length - 1) * stagger + dur;
+  }
+};
+const h = html => { const tp = document.createElement('template'); tp.innerHTML = html.trim(); return tp.content.firstElementChild; };
+const DEFS = {};
+const kit = { seg, lerp, eo, ei, eio, eob, breathe, TextFx, clamp01, h, scene(id, def) { DEFS[id] = def; } };
+
+/* ---------- Dibujos compartidos ---------- */
+window.UI = {
+  J: ['translate(0px,0px)', 'translate(0.9px,-0.6px) rotate(0.08deg)', 'translate(-0.7px,0.8px) rotate(-0.06deg)'],
+  chasm() {
+    return '<path class="wash soft chasm-lw" d="M0 706 C200 696 400 704 700 700 L700 1080 L0 1080 Z"/>' +
+      '<path class="wash soft chasm-rw" d="M1170 700 C1400 694 1700 706 1920 700 L1920 1080 L1170 1080 Z"/>' +
+      '<g class="chasm-light"><path class="ink thin warm chasm-rays" pathLength="1" d="M1520 300 L1520 130 M1520 300 L1650 190 M1520 300 L1390 190 M1520 300 L1690 300 M1520 300 L1350 300 M1520 300 L1640 410 M1520 300 L1400 410"/>' +
+      '<circle class="wash sun chasm-sw" cx="1520" cy="300" r="96"/><circle class="ink warm chasm-si" pathLength="1" cx="1520" cy="300" r="96"/></g>' +
+      '<path class="ink chasm-lt" pathLength="1" d="M0 706 C200 696 400 704 700 700"/>' +
+      '<path class="ink chasm-rt" pathLength="1" d="M1170 700 C1400 694 1700 706 1920 700"/>' +
+      '<path class="ink chasm-lf" pathLength="1" d="M700 700 L688 770 L712 850 L694 930 L708 1010 L698 1080"/>' +
+      '<path class="ink chasm-rf" pathLength="1" d="M1170 700 L1184 770 L1160 850 L1178 930 L1162 1010 L1172 1080"/>' +
+      '<path class="hatch chasm-dk" pathLength="1" d="M740 820 L880 780 M760 900 L940 850 M800 980 L1000 930 M980 1010 L1130 970 M920 1060 L1140 1030 M900 770 L1100 730"/>';
+  },
+  man(p) {
+    return '<g class="' + p + '-man"><circle class="ink ' + p + '-m" pathLength="1" cx="0" cy="-150" r="26"/>' +
+      '<path class="ink ' + p + '-m" pathLength="1" d="M0 -124 L0 -40"/>' +
+      '<path class="ink ' + p + '-m ' + p + '-arms" pathLength="1" d="M0 -105 L-30 -60 M0 -105 L30 -60"/>' +
+      '<path class="ink ' + p + '-m ' + p + '-la" pathLength="1" d="M0 -40 L-14 0"/>' +
+      '<path class="ink ' + p + '-m ' + p + '-lb" pathLength="1" d="M0 -40 L14 0"/></g>';
+  },
+  cross(p) {
+    return '<g class="' + p + '-cross"><path class="ink bold ' + p + '-cv" pathLength="1" d="M0 0 L0 -470"/><path class="ink bold ' + p + '-ch" pathLength="1" d="M-90 -320 L90 -320"/></g>';
+  },
+  flower(p) {
+    const PET = 'M960 606 C978 584 980 548 960 526 C940 548 942 584 960 606 Z';
+    let petals = '';
+    for (let i = 0; i < 12; i++) petals += '<g class="' + p + '-petal" style="transform-origin:960px 650px"><g transform="rotate(' + (i * 30) + ' 960 650)"><path class="wash warm" d="' + PET + '"/><path class="ink thin" pathLength="1" d="' + PET + '"/></g></g>';
+    const L1 = 'M960 850 C920 842 880 805 868 760 C912 764 946 800 960 850 Z', L2 = 'M960 770 C1000 762 1040 725 1052 680 C1008 684 974 720 960 770 Z', BUD = 'M960 604 C988 626 992 664 960 694 C928 664 932 626 960 604 Z';
+    return '<path class="wash soft ' + p + '-soil" d="M700 977 C800 971 1100 981 1220 975 L1220 1080 L700 1080 Z"/>' +
+      '<path class="ink ' + p + '-gnd" pathLength="1" d="M700 977 C800 971 1100 981 1220 975"/>' +
+      '<path class="wash soft ' + p + '-mound" d="M905 976 C930 950 990 950 1015 976 Z"/><path class="ink ' + p + '-mi" pathLength="1" d="M905 976 C930 950 990 950 1015 976"/>' +
+      '<g class="' + p + '-plant" style="transform-origin:960px 975px">' +
+      '<path class="ink bold ' + p + '-stem" pathLength="1" d="M960 975 C954 890 966 800 960 720 C958 690 960 670 960 650"/>' +
+      '<g class="' + p + '-leaf" style="transform-origin:960px 850px"><path class="wash" d="' + L1 + '"/><path class="ink thin" pathLength="1" d="' + L1 + ' M960 850 C935 826 905 795 880 772"/></g>' +
+      '<g class="' + p + '-leaf" style="transform-origin:960px 770px"><path class="wash" d="' + L2 + '"/><path class="ink thin" pathLength="1" d="' + L2 + ' M960 770 C985 746 1015 715 1040 692"/></g>' +
+      '<g class="' + p + '-bud" style="transform-origin:960px 692px"><path class="wash" d="' + BUD + '"/><path class="ink" pathLength="1" d="' + BUD + '"/></g>' +
+      '<g class="' + p + '-head" style="transform-origin:960px 650px">' + petals +
+      '<g class="' + p + '-core" style="transform-origin:960px 650px"><circle cx="960" cy="650" r="42" style="fill:color-mix(in srgb, var(--second) 62%, var(--ground))"/><circle class="ink thin" pathLength="1" cx="960" cy="650" r="42"/><circle class="hatch" pathLength="1" cx="960" cy="650" r="24"/></g>' +
+      '</g></g>';
+  }
+};
+
+/* ====================== ESCENAS ====================== */
+{ /* Título */
+const { seg, eo, lerp, TextFx, breathe } = kit;
+kit.scene('titulo', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground">' +
+      '<svg class="art" viewBox="0 0 1920 1080"><g class="titulo-ink">' +
+      '<path class="wash soft titulo-pw" d="M700 770 C790 740 880 745 960 770 C1040 745 1130 740 1220 770 L1220 815 C1130 785 1040 790 960 815 C880 790 790 785 700 815 Z"/>' +
+      '<path class="ink titulo-d" pathLength="1" d="M700 770 C790 740 880 745 960 770 C1040 745 1130 740 1220 770 L1220 815 C1130 785 1040 790 960 815 C880 790 790 785 700 815 Z"/>' +
+      '<path class="ink titulo-d" pathLength="1" d="M960 770 L960 815"/>' +
+      '<path class="hatch titulo-d" pathLength="1" d="M740 766 C800 748 870 750 930 768 M740 784 C800 766 870 768 930 786 M990 768 C1050 750 1120 748 1180 766 M990 786 C1050 768 1120 766 1180 784"/>' +
+      '<path class="wash warm titulo-hw" d="M960 700 C920 676 896 640 920 616 C938 600 956 612 960 628 C964 612 982 600 1000 616 C1024 640 1000 676 960 700 Z"/>' +
+      '<path class="ink warm titulo-hi" pathLength="1" d="M960 700 C920 676 896 640 920 616 C938 600 956 612 960 628 C964 612 982 600 1000 616 C1024 640 1000 676 960 700 Z"/>' +
+      '</g></svg>' +
+      '<div class="words" style="left:160px;top:300px;width:1600px;text-align:center;align-items:center"><h2 class="line">El Plan de Salvación</h2></div>' +
+      '<div class="rule titulo-rule" style="left:760px;top:440px;width:400px"></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.rule = q('.titulo-rule').style;
+    this.ink = q('.titulo-ink').style;
+    this.pw = q('.titulo-pw').style;
+    this.hw = q('.titulo-hw').style;
+    this.hi = q('.titulo-hi').style;
+    this.d = [...kit.stage.querySelectorAll('.titulo-d')].map(e => e.style);
+    this.ink.transformOrigin = '960px 720px';
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, -0.5);
+    this.rule.transform = 'scaleX(' + eo(seg(t, 0.4, 1.0)) + ')';
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3] + ' scale(' + breathe(t) + ')';
+    const st = [0.8, 1.5, 1.6];
+    this.d.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, st[i], st[i] + 0.8)); });
+    this.pw.opacity = eo(seg(t, 1.4, 2.0));
+    this.hi.strokeDashoffset = 1 - eo(seg(t, 1.8, 2.4));
+    this.hw.opacity = eo(seg(t, 2.2, 2.6));
+  },
+});
+}
+
+{ /* El mundo — Juan 3:16a */
+const { seg, eo, lerp, TextFx, breathe } = kit;
+const J = UI.J;
+kit.scene('mundo', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground">' +
+      '<svg class="art" viewBox="0 0 1920 1080"><g class="mundo-globe">' +
+      '<circle class="wash soft mundo-sea" cx="1340" cy="540" r="296"/>' +
+      '<path class="wash mundo-w" d="M1200 390 C1240 360 1300 380 1310 420 C1320 470 1280 500 1260 540 C1250 590 1270 640 1240 690 C1220 720 1190 690 1190 650 C1190 600 1160 560 1170 500 C1175 450 1170 410 1200 390 Z"/>' +
+      '<path class="wash mundo-w" d="M1380 330 C1440 300 1520 330 1560 390 C1590 440 1560 470 1540 500 C1520 540 1560 580 1540 640 C1520 690 1460 720 1430 690 C1400 660 1420 600 1400 560 C1380 520 1360 480 1370 430 C1375 390 1360 350 1380 330 Z"/>' +
+      '<path class="wash mundo-w" d="M1500 700 C1530 690 1560 710 1550 735 C1540 755 1500 750 1495 725 Z"/>' +
+      '<g class="mundo-ink">' +
+      '<path class="ink mundo-orb" pathLength="1" d="M1340 240 C1512 236 1644 372 1640 540 C1636 708 1508 842 1340 840 C1172 838 1040 706 1040 540 C1040 372 1170 244 1340 240 Z"/>' +
+      '<path class="ink thin mundo-land" pathLength="1" d="M1200 390 C1240 360 1300 380 1310 420 C1320 470 1280 500 1260 540 C1250 590 1270 640 1240 690 C1220 720 1190 690 1190 650 C1190 600 1160 560 1170 500 C1175 450 1170 410 1200 390 Z"/>' +
+      '<path class="ink thin mundo-land" pathLength="1" d="M1380 330 C1440 300 1520 330 1560 390 C1590 440 1560 470 1540 500 C1520 540 1560 580 1540 640 C1520 690 1460 720 1430 690 C1400 660 1420 600 1400 560 C1380 520 1360 480 1370 430 C1375 390 1360 350 1380 330 Z"/>' +
+      '<path class="ink thin mundo-land" pathLength="1" d="M1500 700 C1530 690 1560 710 1550 735 C1540 755 1500 750 1495 725 Z"/>' +
+      '</g></g>' +
+      '<g class="mundo-heart"><path class="wash warm mundo-hw" d="M1620 360 C1560 320 1520 260 1560 220 C1590 195 1615 215 1620 240 C1625 215 1650 195 1680 220 C1720 260 1680 320 1620 360 Z"/>' +
+      '<path class="ink warm mundo-hi" pathLength="1" d="M1620 360 C1560 320 1520 260 1560 220 C1590 195 1615 215 1620 240 C1625 215 1650 195 1680 220 C1720 260 1680 320 1620 360 Z"/></g>' +
+      '</svg>' +
+      '<div class="words" style="left:120px;top:290px;width:720px"><p class="step mundo-step">1 · El amor y el plan de Dios</p><h2 class="line">Porque de tal manera amó Dios al mundo,</h2></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.step = q('.mundo-step').style;
+    this.globe = q('.mundo-globe').style;
+    this.ink = q('.mundo-ink').style;
+    this.orb = q('.mundo-orb').style;
+    this.sea = q('.mundo-sea').style;
+    this.lands = [...kit.stage.querySelectorAll('.mundo-land')].map(e => e.style);
+    this.washes = [...kit.stage.querySelectorAll('.mundo-w')].map(e => e.style);
+    this.heart = q('.mundo-heart').style;
+    this.hw = q('.mundo-hw').style;
+    this.hi = q('.mundo-hi').style;
+    this.globe.transformOrigin = '1340px 540px';
+    this.heart.transformOrigin = '1620px 290px';
+  },
+  render(t) {
+    this.step.opacity = eo(seg(t, 0.4, 0.9));
+    TextFx.fadeFromRight(this.line, t, -0.5);
+    const boil = J[Math.floor(t * 12) % 3];
+    this.ink.transform = boil;
+    this.globe.transform = 'rotate(' + lerp(-1.5, 1.5, t / 5) + 'deg) scale(' + breathe(t) + ')';
+    this.orb.strokeDashoffset = 1 - eo(seg(t, 0.1, 1.5));
+    this.sea.opacity = eo(seg(t, 1.0, 2.0));
+    const starts = [1.0, 1.3, 1.9];
+    this.lands.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, starts[i], starts[i] + 1.2)); });
+    this.washes.forEach((s, i) => { s.opacity = eo(seg(t, starts[i] + 0.8, starts[i] + 1.6)); });
+    this.hi.strokeDashoffset = 1 - eo(seg(t, 2.9, 3.7));
+    this.hw.opacity = eo(seg(t, 3.4, 4.0));
+    const beat = t > 3.7 ? 1 + 0.045 * Math.max(0, Math.sin((t - 3.7) * 4.2)) : 1;
+    this.heart.transform = boil + ' scale(' + beat + ')';
+  },
+});
+}
+
+{ /* Su Hijo — Juan 3:16b */
+const { seg, eo, eio, lerp, TextFx } = kit;
+const J = UI.J;
+kit.scene('hijo', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground">' +
+      '<svg class="art" viewBox="0 0 1920 1080">' +
+      '<path class="wash sun hijo-beam" d="M1352 232 L1408 232 L1580 650 L1180 650 Z"/>' +
+      '<g class="hijo-star"><path class="wash warm hijo-sw" d="M1380 100 L1398 152 L1450 170 L1398 188 L1380 240 L1362 188 L1310 170 L1362 152 Z"/>' +
+      '<path class="ink warm hijo-si" pathLength="1" d="M1380 100 L1398 152 L1450 170 L1398 188 L1380 240 L1362 188 L1310 170 L1362 152 Z"/></g>' +
+      '<g class="hijo-crib"><path class="wash soft hijo-tw" d="M1200 640 L1240 760 L1520 760 L1560 640 Z"/>' +
+      '<path class="wash hijo-bw" d="M1320 655 C1320 612 1362 596 1405 600 C1458 606 1488 632 1482 664 C1476 694 1438 704 1398 704 C1352 704 1318 694 1320 655 Z"/>' +
+      '<g class="hijo-ink">' +
+      '<path class="ink hijo-d" pathLength="1" d="M1200 640 L1240 760 L1520 760 L1560 640 Z"/>' +
+      '<path class="ink thin hijo-d" pathLength="1" d="M1236 760 L1330 884 M1330 760 L1236 884 M1430 760 L1526 884 M1526 760 L1430 884"/>' +
+      '<path class="hatch hijo-d" pathLength="1" d="M1222 652 L1262 648 M1250 668 L1296 660 M1480 646 L1534 652 M1470 668 L1522 676 M1240 690 L1290 686 M1500 690 L1540 700"/>' +
+      '<path class="ink hijo-d" pathLength="1" d="M1320 655 C1320 612 1362 596 1405 600 C1458 606 1488 632 1482 664 C1476 694 1438 704 1398 704 C1352 704 1318 694 1320 655 Z"/>' +
+      '<circle class="ink hijo-d" pathLength="1" cx="1298" cy="648" r="38"/>' +
+      '<path class="ink thin hijo-d" pathLength="1" d="M1348 640 C1368 630 1400 628 1430 640 M1352 668 C1380 660 1420 662 1450 674"/>' +
+      '</g></g></svg>' +
+      '<div class="words" style="left:120px;top:330px;width:720px"><h2 class="line">que ha dado a su Hijo unigénito,</h2></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.beam = q('.hijo-beam').style;
+    this.star = q('.hijo-star').style;
+    this.sw = q('.hijo-sw').style;
+    this.si = q('.hijo-si').style;
+    this.crib = q('.hijo-crib').style;
+    this.ink = q('.hijo-ink').style;
+    this.tw = q('.hijo-tw').style;
+    this.bw = q('.hijo-bw').style;
+    this.draws = [...kit.stage.querySelectorAll('.hijo-d')].map(e => e.style);
+    this.star.transformOrigin = '1380px 170px';
+    this.crib.transformOrigin = '1380px 880px';
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.3);
+    const boil = J[Math.floor(t * 12) % 3];
+    this.ink.transform = boil;
+    this.si.strokeDashoffset = 1 - eo(seg(t, 0.2, 0.9));
+    this.sw.opacity = eo(seg(t, 0.7, 1.1));
+    this.star.transform = boil + ' rotate(' + lerp(0, 6, t / 5.5) + 'deg) scale(' + (1 + 0.06 * Math.sin(t * 3.1)) + ')';
+    this.beam.opacity = eo(seg(t, 0.9, 1.9)) * (0.62 + 0.1 * Math.sin(t * 2.2));
+    const starts = [1.0, 1.6, 2.0, 2.4, 3.0, 3.3];
+    const durs = [1.0, 0.8, 0.8, 0.9, 0.6, 0.5];
+    this.draws.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, starts[i], starts[i] + durs[i])); });
+    this.tw.opacity = eo(seg(t, 1.6, 2.4));
+    this.bw.opacity = eo(seg(t, 3.2, 3.9));
+    const rock = eio(seg(t, 3.4, 4.2)) * 1.4 * Math.sin((t - 3.4) * 2.6);
+    this.crib.transform = 'rotate(' + rock + 'deg)';
+  },
+});
+}
+
+{ /* La cruz — Juan 3:16c */
+const { seg, eo, eio, lerp, TextFx } = kit;
+const J = UI.J;
+const HILL = 'M940 800 C1100 790 1200 760 1300 710 C1380 672 1440 668 1500 700 C1600 750 1720 790 1940 800';
+kit.scene('cruz', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground">' +
+      '<svg class="art" viewBox="0 0 1920 1080">' +
+      '<path class="wash soft cruz-hw" d="' + HILL + ' L1940 1080 L940 1080 Z"/>' +
+      '<g class="cruz-ink">' +
+      '<path class="ink thin warm cruz-rays" pathLength="1" d="M1420 430 L1250 300 M1420 430 L1360 230 M1420 430 L1490 225 M1420 430 L1590 300 M1420 430 L1200 400 M1420 430 L1640 400"/>' +
+      '<path class="ink cruz-hill" pathLength="1" d="' + HILL + '"/>' +
+      '<path class="ink cruz-v" pathLength="1" d="M1420 690 L1422 330"/>' +
+      '<path class="ink cruz-h" pathLength="1" d="M1330 432 L1512 428"/>' +
+      '<g class="cruz-man"><circle class="ink cruz-m" pathLength="1" cx="0" cy="-150" r="26"/>' +
+      '<path class="ink cruz-m" pathLength="1" d="M0 -124 L0 -40"/>' +
+      '<path class="ink cruz-m cruz-arms" pathLength="1" d="M0 -105 L-30 -60 M0 -105 L30 -60"/>' +
+      '<path class="ink cruz-m cruz-la" pathLength="1" d="M0 -40 L-14 0"/>' +
+      '<path class="ink cruz-m cruz-lb" pathLength="1" d="M0 -40 L14 0"/></g>' +
+      '</g></svg>' +
+      '<div class="words" style="left:120px;top:250px;width:740px"><h2 class="line">para que todo aquel que en él cree, no se pierda,</h2></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.ink = q('.cruz-ink').style;
+    this.hw = q('.cruz-hw').style;
+    this.hill = q('.cruz-hill').style;
+    this.v = q('.cruz-v').style;
+    this.h = q('.cruz-h').style;
+    this.rays = q('.cruz-rays').style;
+    this.man = q('.cruz-man');
+    this.parts = [...kit.stage.querySelectorAll('.cruz-m')].map(e => e.style);
+    this.la = q('.cruz-la');
+    this.lb = q('.cruz-lb');
+    this.arms = q('.cruz-arms');
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.2);
+    this.ink.transform = J[Math.floor(t * 12) % 3];
+    this.hill.strokeDashoffset = 1 - eo(seg(t, 0.2, 1.2));
+    this.hw.opacity = eo(seg(t, 0.8, 1.6));
+    this.v.strokeDashoffset = 1 - eo(seg(t, 0.7, 1.5));
+    this.h.strokeDashoffset = 1 - eo(seg(t, 1.3, 1.8));
+    const starts = [1.3, 1.5, 1.6, 1.7, 1.75];
+    this.parts.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, starts[i], starts[i] + 0.4)); });
+    const walk = eio(seg(t, 2.0, 4.3));
+    const x = lerp(1010, 1340, walk);
+    const y = 793 - (x - 1010) * (95 / 330);
+    const stride = t > 2.0 && t < 4.3 ? Math.sin((t - 2.0) * 7.5) : 0;
+    const bob = Math.abs(stride) * 5;
+    this.man.setAttribute('transform', 'translate(' + x + ' ' + (y - bob) + ')');
+    this.la.setAttribute('d', 'M0 -40 L' + (-14 + 16 * stride) + ' 0');
+    this.lb.setAttribute('d', 'M0 -40 L' + (14 - 16 * stride) + ' 0');
+    const lift = eo(seg(t, 4.3, 4.9));
+    this.arms.setAttribute('d', 'M0 -105 L' + lerp(-30, -36, lift) + ' ' + lerp(-60, -150, lift) + ' M0 -105 L' + lerp(30, 36, lift) + ' ' + lerp(-60, -150, lift));
+    this.rays.strokeDashoffset = 1 - eo(seg(t, 3.7, 4.6));
+    this.rays.opacity = 0.8 + 0.2 * Math.sin(t * 2.5);
+  },
+});
+}
+
+{ /* Vida eterna — Juan 3:16d */
+const { seg, eo, eio, lerp, TextFx } = kit;
+const J = UI.J;
+const HZ = 'M260 762 C500 750 700 770 960 760 C1220 750 1420 772 1660 760';
+kit.scene('vida', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground">' +
+      '<svg class="art" viewBox="0 0 1920 1080"><defs><clipPath id="vida-clip"><rect x="0" y="0" width="1920" height="758"/></clipPath></defs>' +
+      '<g clip-path="url(#vida-clip)"><g class="vida-sun">' +
+      '<path class="ink thin warm vida-rays" pathLength="1" d="M960 760 L960 420 M960 760 L1180 500 M960 760 L740 500 M960 760 L1270 690 M960 760 L650 690 M960 760 L1100 440 M960 760 L820 440"/>' +
+      '<circle class="wash sun vida-sw" cx="960" cy="760" r="150"/>' +
+      '<circle class="ink warm vida-si" pathLength="1" cx="960" cy="760" r="150"/></g></g>' +
+      '<path class="wash soft vida-gw" d="' + HZ + ' L1660 1080 L260 1080 Z"/>' +
+      '<g class="vida-ink"><path class="ink vida-hz" pathLength="1" d="' + HZ + '"/>' +
+      '<g class="vida-birds"><path class="ink thin vida-b" pathLength="1" d="M1300 330 C1320 310 1340 312 1350 330 C1360 312 1380 310 1400 330"/>' +
+      '<path class="ink thin vida-b" pathLength="1" d="M1430 400 C1445 386 1458 388 1465 400 C1472 388 1485 386 1500 400"/></g></g></svg>' +
+      '<div class="words" style="left:210px;top:170px;width:1500px;text-align:center;align-items:center"><h2 class="line">mas tenga vida eterna.</h2>' +
+      '<p class="ref vida-ref">Juan 3:16</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.ref = q('.vida-ref').style;
+    this.ink = q('.vida-ink').style;
+    this.hz = q('.vida-hz').style;
+    this.gw = q('.vida-gw').style;
+    this.sun = q('.vida-sun');
+    this.sw = q('.vida-sw').style;
+    this.si = q('.vida-si').style;
+    this.rays = q('.vida-rays');
+    this.birds = q('.vida-birds');
+    this.bs = [...kit.stage.querySelectorAll('.vida-b')].map(e => e.style);
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.2);
+    this.ref.opacity = eo(seg(t, 1.5, 2.1));
+    this.ref.transform = 'translateY(' + lerp(14, 0, eo(seg(t, 1.5, 2.1))) + 'px)';
+    this.ink.transform = J[Math.floor(t * 12) % 3];
+    this.hz.strokeDashoffset = 1 - eo(seg(t, 0.1, 1.0));
+    this.gw.opacity = eo(seg(t, 0.6, 1.4));
+    const rise = lerp(150, -20, eo(seg(t, 0.4, 2.8))) + Math.sin(t * 1.1) * 3;
+    this.sun.setAttribute('transform', 'translate(0 ' + rise + ')');
+    this.si.strokeDashoffset = 1 - eo(seg(t, 0.6, 1.5));
+    this.sw.opacity = eo(seg(t, 1.0, 1.8));
+    this.rays.style.strokeDashoffset = 1 - eo(seg(t, 1.9, 2.9));
+    this.rays.setAttribute('transform', 'rotate(' + (t * 2) + ' 960 760)');
+    const bstart = [2.4, 2.7];
+    this.bs.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, bstart[i], bstart[i] + 0.5)); });
+    this.birds.setAttribute('transform', 'translate(' + (lerp(0, -40, seg(t, 2.4, 4.5))) + ' ' + (Math.sin(t * 2.4) * 6) + ')');
+  },
+});
+}
+
+{ /* Vida abundante — Juan 10:10 */
+const { seg, eo, eob, lerp, TextFx } = kit;
+const LV = [[1210, 480, 50], [1250, 560, 44], [1520, 430, 50], [1480, 500, 44], [1290, 350, 46], [1300, 410, 40], [1450, 330, 46], [1440, 390, 40], [1360, 380, 52], [1370, 470, 44]];
+const FR = [[1232, 500], [1498, 450], [1310, 372], [1430, 352], [1360, 400], [1266, 560]];
+kit.scene('abundancia', {
+  init(kit) {
+    let lv = '', fr = '';
+    for (const [x, y, r] of LV) lv += '<circle class="wash abundancia-leaf" cx="' + x + '" cy="' + y + '" r="' + r + '" style="transform-box:fill-box;transform-origin:center"/>';
+    for (const [x, y] of FR) fr += '<circle class="wash warm abundancia-fruit" cx="' + x + '" cy="' + y + '" r="13" style="transform-box:fill-box;transform-origin:center"/>';
+    kit.stage.append(kit.h('<div class="ground">' +
+      '<svg class="art" viewBox="0 0 1920 1080"><g class="abundancia-ink">' +
+      '<path class="wash soft abundancia-gw" d="M1000 870 C1200 850 1500 880 1720 860 L1720 1080 L1000 1080 Z"/>' +
+      '<path class="ink abundancia-gnd" pathLength="1" d="M1000 870 C1200 850 1500 880 1720 860"/>' +
+      '<g class="abundancia-tree">' +
+      '<path class="ink bold abundancia-trunk" pathLength="1" d="M1360 870 C1356 780 1366 700 1360 600 C1356 520 1364 460 1360 400"/>' +
+      '<path class="ink abundancia-br" pathLength="1" d="M1360 640 C1300 610 1250 560 1210 480 M1360 560 C1420 530 1480 500 1520 430 M1360 480 C1320 440 1300 400 1290 350 M1360 440 C1400 410 1440 380 1450 330"/>' +
+      lv + fr + '</g></g></svg>' +
+      '<div class="words" style="left:120px;top:200px;width:800px"><h2 class="line long">Yo he venido para que tengan vida, y para que la tengan en abundancia.</h2><p class="cite abundancia-cite">Juan 10:10</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.cite = q('.abundancia-cite').style;
+    this.ink = q('.abundancia-ink').style;
+    this.gw = q('.abundancia-gw').style;
+    this.gnd = q('.abundancia-gnd').style;
+    this.trunk = q('.abundancia-trunk').style;
+    this.br = q('.abundancia-br').style;
+    this.tree = q('.abundancia-tree').style;
+    this.tree.transformOrigin = '1360px 870px';
+    this.leaves = [...kit.stage.querySelectorAll('.abundancia-leaf')].map(e => e.style);
+    this.fruits = [...kit.stage.querySelectorAll('.abundancia-fruit')].map(e => e.style);
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.2);
+    this.cite.opacity = eo(seg(t, 4.0, 4.5));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    this.gnd.strokeDashoffset = 1 - eo(seg(t, 0.2, 1.0));
+    this.gw.opacity = eo(seg(t, 0.7, 1.3));
+    this.trunk.strokeDashoffset = 1 - eo(seg(t, 0.6, 1.9));
+    this.br.strokeDashoffset = 1 - eo(seg(t, 1.6, 2.7));
+    this.tree.transform = 'rotate(' + (Math.sin(t * 1.3) * 1.2) + 'deg)';
+    this.leaves.forEach((s, i) => { s.transform = 'scale(' + eob(seg(t, 2.3 + i * 0.13, 2.8 + i * 0.13), 1.6) + ')'; });
+    this.fruits.forEach((s, i) => { s.transform = 'scale(' + eob(seg(t, 3.7 + i * 0.14, 4.1 + i * 0.14), 1.7) + ')'; });
+  },
+});
+}
+
+{ /* Todos pecaron — Romanos 3:23 */
+const { seg, eo, lerp, TextFx } = kit;
+const X = [1120, 1250, 1380, 1510, 1640];
+kit.scene('pecado', {
+  init(kit) {
+    let men = '';
+    for (const x of X) men += '<g class="pecado-pos" transform="translate(' + x + ' 830)">' + UI.man('pecado') + '</g>';
+    kit.stage.append(kit.h('<div class="ground">' +
+      '<svg class="art" viewBox="0 0 1920 1080">' +
+      '<g class="pecado-glory"><path class="ink thin warm pecado-rays" pathLength="1" d="M1500 200 L1500 60 M1500 200 L1610 110 M1500 200 L1390 110 M1500 200 L1640 200 M1500 200 L1360 200 M1500 200 L1600 290 M1500 200 L1400 290"/>' +
+      '<circle class="wash sun pecado-sw" cx="1500" cy="200" r="78"/><circle class="ink warm pecado-si" pathLength="1" cx="1500" cy="200" r="78"/></g>' +
+      '<g class="pecado-ink"><path class="ink pecado-gnd" pathLength="1" d="M1040 834 C1200 826 1500 838 1720 830"/>' + men +
+      '<path class="hatch pecado-dk" pathLength="1" d="M1070 560 L1130 500 M1130 580 L1210 500 M1200 590 L1290 500 M1280 590 L1370 500 M1360 590 L1450 500 M1440 590 L1530 500 M1520 590 L1610 500 M1600 590 L1690 500 M1680 580 L1730 530"/>' +
+      '</g></svg>' +
+      '<div class="words" style="left:120px;top:150px;width:800px"><p class="step pecado-step">2 · El problema del pecado</p><h2 class="line long">Por cuanto todos pecaron, y están destituidos de la gloria de Dios.</h2><p class="cite pecado-cite">Romanos 3:23</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.step = q('.pecado-step').style;
+    this.cite = q('.pecado-cite').style;
+    this.ink = q('.pecado-ink').style;
+    this.glory = q('.pecado-glory');
+    this.rays = q('.pecado-rays').style;
+    this.sw = q('.pecado-sw').style;
+    this.si = q('.pecado-si').style;
+    this.gnd = q('.pecado-gnd').style;
+    this.dk = q('.pecado-dk').style;
+    this.men = [...kit.stage.querySelectorAll('.pecado-pos')];
+    this.parts = this.men.map(m => [...m.querySelectorAll('.pecado-m')].map(e => e.style));
+  },
+  render(t) {
+    this.step.opacity = eo(seg(t, 0.1, 0.6));
+    TextFx.fadeFromRight(this.line, t, 0.5);
+    this.cite.opacity = eo(seg(t, 4.6, 5.1));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    this.si.strokeDashoffset = 1 - eo(seg(t, 0.3, 0.9));
+    this.rays.strokeDashoffset = 1 - eo(seg(t, 0.7, 1.3));
+    this.sw.opacity = eo(seg(t, 0.8, 1.3)) * lerp(1, 0.3, eo(seg(t, 3.4, 4.6)));
+    this.glory.setAttribute('transform', 'translate(0 ' + lerp(0, -90, eo(seg(t, 3.4, 4.8))) + ')');
+    this.gnd.strokeDashoffset = 1 - eo(seg(t, 0.6, 1.4));
+    this.parts.forEach((ps, i) => {
+      const t0 = 1.0 + i * 0.28;
+      ps.forEach((s, j) => { s.strokeDashoffset = 1 - eo(seg(t, t0 + j * 0.07, t0 + 0.4 + j * 0.07)); });
+      const bow = lerp(0, 11, eo(seg(t, 3.2 + i * 0.1, 4.0 + i * 0.1)));
+      this.men[i].setAttribute('transform', 'translate(' + X[i] + ' 830) rotate(' + bow + ')');
+    });
+    this.dk.strokeDashoffset = 1 - eo(seg(t, 3.8, 4.8));
+  },
+});
+}
+
+{ /* La separación — Isaías 59:2 */
+const { seg, eo, ei, lerp, TextFx } = kit;
+kit.scene('separacion', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><svg class="art" viewBox="0 0 1920 1080">' +
+      '<path class="wash soft separacion-mw" d="M700 700 C860 694 1010 706 1170 700 L1170 1080 L700 1080 Z"/>' +
+      UI.chasm() +
+      '<path class="ink separacion-mid" pathLength="1" d="M700 700 C860 694 1010 706 1170 700"/>' +
+      '<g class="separacion-ink"><g class="separacion-pos" transform="translate(560 700)">' + UI.man('separacion') + '</g></g></svg>' +
+      '<div class="words" style="left:120px;top:150px;width:800px"><h2 class="line long">Vuestras iniquidades han hecho división entre vosotros y vuestro Dios.</h2><p class="cite separacion-cite">Isaías 59:2</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.cite = q('.separacion-cite').style;
+    this.ink = q('.separacion-ink').style;
+    for (const k of ['lw', 'rw', 'lt', 'rt', 'lf', 'rf', 'dk', 'rays', 'sw', 'si']) this[k] = q('.chasm-' + k).style;
+    this.mw = q('.separacion-mw').style;
+    this.mid = q('.separacion-mid').style;
+    this.pos = q('.separacion-pos');
+    this.parts = [...kit.stage.querySelectorAll('.separacion-m')].map(e => e.style);
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.3);
+    this.cite.opacity = eo(seg(t, 4.4, 4.9));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    this.lt.strokeDashoffset = 1 - eo(seg(t, 0.2, 0.8));
+    this.mid.strokeDashoffset = 1 - eo(seg(t, 0.7, 1.1));
+    this.rt.strokeDashoffset = 1 - eo(seg(t, 1.0, 1.6));
+    this.lw.opacity = eo(seg(t, 0.6, 1.2));
+    this.rw.opacity = eo(seg(t, 1.3, 1.9));
+    this.si.strokeDashoffset = 1 - eo(seg(t, 0.9, 1.6));
+    this.rays.strokeDashoffset = 1 - eo(seg(t, 1.3, 2.0));
+    this.sw.opacity = eo(seg(t, 1.4, 1.9));
+    this.parts.forEach((s, j) => { s.strokeDashoffset = 1 - eo(seg(t, 1.5 + j * 0.08, 1.9 + j * 0.08)); });
+    const crack = eo(seg(t, 2.8, 3.2));
+    this.mid.opacity = 1 - crack;
+    const drop = ei(seg(t, 2.9, 3.6));
+    this.mw.opacity = eo(seg(t, 0.9, 1.5)) * (1 - drop);
+    this.mw.transform = 'translateY(' + (drop * 160) + 'px)';
+    this.lf.strokeDashoffset = 1 - eo(seg(t, 2.8, 3.4));
+    this.rf.strokeDashoffset = 1 - eo(seg(t, 2.9, 3.5));
+    this.dk.strokeDashoffset = 1 - eo(seg(t, 3.3, 4.1));
+    const back = eo(seg(t, 3.0, 3.4));
+    const hop = Math.sin(Math.PI * seg(t, 3.0, 3.4)) * 12;
+    this.pos.setAttribute('transform', 'translate(' + lerp(560, 540, back) + ' ' + (700 - hop) + ')');
+  },
+});
+}
+
+{ /* La cruz como puente — Romanos 5:8 */
+const { seg, eo, ei, lerp, TextFx, breathe } = kit;
+kit.scene('puente', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><svg class="art" viewBox="0 0 1920 1080">' + UI.chasm() +
+      '<g class="puente-ink"><g transform="translate(540 700)">' + UI.man('puente') + '</g>' +
+      '<g class="puente-pivot" transform="translate(700 700)">' + UI.cross('puente') + '</g></g></svg>' +
+      '<div class="words" style="left:120px;top:120px;width:800px"><p class="step puente-step">3 · La solución de Dios</p><h2 class="line long">Mas Dios muestra su amor para con nosotros, en que siendo aún pecadores, Cristo murió por nosotros.</h2><p class="cite puente-cite">Romanos 5:8</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.step = q('.puente-step').style;
+    this.cite = q('.puente-cite').style;
+    this.ink = q('.puente-ink').style;
+    for (const e of kit.stage.querySelectorAll('.chasm-lt, .chasm-rt, .chasm-lf, .chasm-rf, .chasm-dk, .chasm-rays, .chasm-si, .puente-m')) e.style.strokeDashoffset = 0;
+    this.sw = q('.chasm-sw').style;
+    this.sw.transformOrigin = '1520px 300px';
+    this.pivot = q('.puente-pivot');
+    this.cv = q('.puente-cv').style;
+    this.ch = q('.puente-ch').style;
+  },
+  render(t) {
+    this.step.opacity = eo(seg(t, 0.1, 0.6));
+    TextFx.fadeFromRight(this.line, t, 0.5);
+    this.cite.opacity = eo(seg(t, 5.2, 5.7));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    this.cv.strokeDashoffset = 1 - eo(seg(t, 1.2, 2.0));
+    this.ch.strokeDashoffset = 1 - eo(seg(t, 1.9, 2.4));
+    const lean = -5 * eo(seg(t, 3.2, 3.5)) * (1 - eo(seg(t, 3.5, 3.65)));
+    const fall = 90 * ei(seg(t, 3.5, 4.2));
+    const settle = t > 4.2 ? 4 * Math.sin((t - 4.2) * 14) * Math.exp(-(t - 4.2) * 5) : 0;
+    this.pivot.setAttribute('transform', 'translate(700 700) rotate(' + (lean + fall + settle) + ')');
+    const pulse = t > 4.2 ? Math.exp(-(t - 4.2) * 2.5) : 0;
+    this.sw.transform = 'scale(' + (breathe(t) + 0.15 * pulse) + ')';
+  },
+});
+}
+
+{ /* El camino — Juan 14:6 */
+const { seg, eo, eio, lerp, TextFx } = kit;
+kit.scene('camino', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="glow camino-glow"></div><svg class="art" viewBox="0 0 1920 1080">' + UI.chasm() +
+      '<path class="ink thin warm camino-rays2" pathLength="1" d="M1520 300 L1520 40 M1520 300 L1740 110 M1520 300 L1300 110 M1520 300 L1800 300 M1520 300 L1240 300 M1520 300 L1720 500 M1520 300 L1320 500"/>' +
+      '<g class="camino-ink"><g transform="translate(700 700) rotate(90)">' + UI.cross('camino') + '</g>' +
+      '<g class="camino-pos" transform="translate(540 700)">' + UI.man('camino') + '</g></g></svg>' +
+      '<div class="words" style="left:120px;top:150px;width:800px"><h2 class="line long">Yo soy el camino, y la verdad, y la vida; nadie viene al Padre, sino por mí.</h2><p class="cite camino-cite">Juan 14:6</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.cite = q('.camino-cite').style;
+    this.ink = q('.camino-ink').style;
+    this.glow = q('.camino-glow').style;
+    for (const e of kit.stage.querySelectorAll('.chasm-lt, .chasm-rt, .chasm-lf, .chasm-rf, .chasm-dk, .chasm-rays, .chasm-si, .camino-m, .camino-cv, .camino-ch')) e.style.strokeDashoffset = 0;
+    this.sw = q('.chasm-sw').style;
+    this.sw.transformOrigin = '1520px 300px';
+    this.rays2 = q('.camino-rays2').style;
+    this.pos = q('.camino-pos');
+    this.la = q('.camino-la');
+    this.lb = q('.camino-lb');
+    this.arms = q('.camino-arms');
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.3);
+    this.cite.opacity = eo(seg(t, 5.6, 6.1));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    const walking = t > 0.8 && t < 5.2;
+    const walk = eio(seg(t, 0.8, 5.2));
+    const x = lerp(540, 1420, walk);
+    const stride = walking ? Math.sin((t - 0.8) * 8) : 0;
+    const bob = Math.abs(stride) * 5;
+    this.pos.setAttribute('transform', 'translate(' + x + ' ' + (700 - bob) + ')');
+    this.la.setAttribute('d', 'M0 -40 L' + (-14 + 16 * stride) + ' 0');
+    this.lb.setAttribute('d', 'M0 -40 L' + (14 - 16 * stride) + ' 0');
+    const lift = eo(seg(t, 5.3, 5.9));
+    this.arms.setAttribute('d', 'M0 -105 L' + lerp(-30, -36, lift) + ' ' + lerp(-60, -150, lift) + ' M0 -105 L' + lerp(30, 36, lift) + ' ' + lerp(-60, -150, lift));
+    this.sw.transform = 'scale(' + lerp(1, 1.3, eo(seg(t, 5.2, 6.4))) + ')';
+    this.rays2.strokeDashoffset = 1 - eo(seg(t, 5.3, 6.3));
+    this.glow.opacity = 0.6 * eo(seg(t, 5.2, 6.6));
+  },
+});
+}
+
+{ /* El regalo — Efesios 2:8-9 */
+const { seg, eo, eio, lerp, TextFx } = kit;
+kit.scene('regalo', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><svg class="art" viewBox="0 0 1920 1080"><g class="regalo-ink">' +
+      '<path class="ink regalo-h" pathLength="1" d="M1230 900 C1230 980 1330 1030 1430 1030 C1530 1030 1630 980 1630 900"/>' +
+      '<path class="ink thin regalo-h" pathLength="1" d="M1230 900 C1250 870 1290 862 1320 884 M1630 900 C1610 870 1570 862 1540 884"/>' +
+      '<path class="hatch regalo-h" pathLength="1" d="M1300 1006 L1302 950 M1362 1024 L1364 962 M1498 1024 L1496 962 M1560 1006 L1558 950"/>' +
+      '<g class="regalo-box" transform="translate(1430 640)">' +
+      '<rect class="wash soft regalo-bw" x="-100" y="-170" width="200" height="170"/>' +
+      '<rect class="wash warm regalo-lw" x="-116" y="-204" width="232" height="36"/>' +
+      '<rect class="ink regalo-d" pathLength="1" x="-100" y="-170" width="200" height="170"/>' +
+      '<rect class="ink regalo-d" pathLength="1" x="-116" y="-204" width="232" height="36"/>' +
+      '<path class="ink warm regalo-d" pathLength="1" d="M0 -168 L0 -2 M-98 -85 L98 -85"/>' +
+      '<path class="ink warm regalo-d" pathLength="1" d="M0 -206 C-44 -262 -82 -236 -34 -210 M0 -206 C44 -262 82 -236 34 -210"/>' +
+      '</g>' +
+      '<path class="ink thin warm regalo-sp" pathLength="1" d="M1290 740 L1250 700 M1570 740 L1610 700 M1300 820 L1260 820 M1560 820 L1600 820 M1430 690 L1430 640"/>' +
+      '</g></svg>' +
+      '<div class="words" style="left:120px;top:120px;width:800px"><p class="step regalo-step">4 · La decisión personal</p><h2 class="line long">Porque por gracia sois salvos por medio de la fe; y esto no de vosotros, pues es don de Dios; no por obras.</h2><p class="cite regalo-cite">Efesios 2:8-9</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.step = q('.regalo-step').style;
+    this.cite = q('.regalo-cite').style;
+    this.ink = q('.regalo-ink').style;
+    this.box = q('.regalo-box');
+    this.bw = q('.regalo-bw').style;
+    this.lw = q('.regalo-lw').style;
+    this.sp = q('.regalo-sp').style;
+    this.d = [...kit.stage.querySelectorAll('.regalo-d')].map(e => e.style);
+    this.h = [...kit.stage.querySelectorAll('.regalo-h')].map(e => e.style);
+  },
+  render(t) {
+    this.step.opacity = eo(seg(t, 0.1, 0.6));
+    TextFx.fadeFromRight(this.line, t, 0.5);
+    this.cite.opacity = eo(seg(t, 6.4, 6.9));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    const ds = [0.8, 1.4, 1.8, 2.2];
+    this.d.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, ds[i], ds[i] + 0.6)); });
+    this.bw.opacity = eo(seg(t, 1.3, 1.9));
+    this.lw.opacity = eo(seg(t, 1.7, 2.2));
+    const hs = [2.8, 3.4, 3.7];
+    this.h.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, hs[i], hs[i] + 0.7)); });
+    const fall = eio(seg(t, 4.4, 5.6));
+    const bounce = t > 5.6 ? -8 * Math.sin((t - 5.6) * 12) * Math.exp(-(t - 5.6) * 5) : 0;
+    const sway = Math.sin(t * 2) * 1.5 * (1 - fall);
+    this.box.setAttribute('transform', 'translate(1430 ' + (640 + 320 * fall + bounce) + ') rotate(' + sway + ')');
+    this.sp.strokeDashoffset = 1 - eo(seg(t, 5.6, 6.1));
+    this.sp.opacity = 1 - eo(seg(t, 6.9, 7.5));
+  },
+});
+}
+
+{ /* La puerta — Apocalipsis 3:20 */
+const { seg, eo, eio, lerp, TextFx } = kit;
+kit.scene('puerta', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="glow puerta-glow"></div><svg class="art" viewBox="0 0 1920 1080">' +
+      '<rect class="wash sun puerta-in" x="1252" y="312" width="276" height="548"/>' +
+      '<path class="ink thin warm puerta-rays" pathLength="1" d="M1252 580 L1060 540 M1252 620 L1080 700 M1252 540 L1100 420 M1252 660 L1130 780"/>' +
+      '<g class="puerta-ink">' +
+      '<g class="puerta-door"><rect class="wash soft puerta-dw" x="1252" y="312" width="276" height="548"/>' +
+      '<rect class="ink puerta-d" pathLength="1" x="1252" y="312" width="276" height="548"/>' +
+      '<rect class="ink thin puerta-d" pathLength="1" x="1290" y="350" width="200" height="190"/>' +
+      '<rect class="ink thin puerta-d" pathLength="1" x="1290" y="590" width="200" height="230"/></g>' +
+      '<path class="ink bold puerta-f" pathLength="1" d="M1240 860 L1240 300 L1540 300 L1540 860"/>' +
+      '<path class="ink puerta-f" pathLength="1" d="M1100 862 C1300 854 1500 866 1700 860"/>' +
+      '<path class="ink thin puerta-k" pathLength="1" d="M1296 548 C1284 570 1284 594 1296 616 M1274 536 C1258 566 1258 598 1274 628"/>' +
+      '</g></svg>' +
+      '<div class="words" style="left:120px;top:150px;width:800px"><h2 class="line long">He aquí, yo estoy a la puerta y llamo; si alguno oye mi voz y abre la puerta, entraré a él.</h2><p class="cite puerta-cite">Apocalipsis 3:20</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.cite = q('.puerta-cite').style;
+    this.ink = q('.puerta-ink').style;
+    this.glow = q('.puerta-glow').style;
+    this.door = q('.puerta-door').style;
+    this.door.transformOrigin = '1252px 586px';
+    this.dw = q('.puerta-dw').style;
+    this.in = q('.puerta-in').style;
+    this.rays = q('.puerta-rays').style;
+    this.k = q('.puerta-k').style;
+    this.f = [...kit.stage.querySelectorAll('.puerta-f')].map(e => e.style);
+    this.d = [...kit.stage.querySelectorAll('.puerta-d')].map(e => e.style);
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.3);
+    this.cite.opacity = eo(seg(t, 5.8, 6.3));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    const fs = [0.4, 0.9];
+    this.f.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, fs[i], fs[i] + 0.8)); });
+    const ds = [1.1, 1.7, 2.0];
+    this.d.forEach((s, i) => { s.strokeDashoffset = 1 - eo(seg(t, ds[i], ds[i] + 0.6)); });
+    this.dw.opacity = eo(seg(t, 1.5, 2.1));
+    const kn = (t > 2.4 && t < 2.7) || (t > 2.85 && t < 3.15) || (t > 3.3 && t < 3.6) ? 1 : 0;
+    this.k.strokeDashoffset = 1 - kn;
+    const open = eio(seg(t, 4.3, 5.3));
+    this.door.transform = 'translateX(' + (kn * 2) + 'px) scaleX(' + lerp(1, 0.1, open) + ')';
+    this.in.opacity = eo(seg(t, 4.4, 5.4));
+    this.rays.strokeDashoffset = 1 - eo(seg(t, 4.9, 5.8));
+    this.glow.opacity = 0.5 * eo(seg(t, 4.8, 6.2));
+  },
+});
+}
+
+{ /* Oración de entrega — semilla, brote, capullo, girasol */
+const { seg, eo, ei, eob, lerp, TextFx } = kit;
+const L = [[0.3, 5.6], [6.0, 11.3], [11.7, 15.7], [16.1, 20.6]];
+const W = 'left:210px;top:330px;width:1500px;text-align:center;align-items:center';
+kit.scene('oracion', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="glow oracion-glow"></div>' +
+      '<svg class="art" viewBox="0 0 1920 1080"><g class="oracion-ink">' + UI.flower('oracion') +
+      '<g class="oracion-seed"><path d="M0 -14 C9 -14 11 0 0 14 C-11 0 -9 -14 0 -14 Z" style="fill:color-mix(in srgb, var(--second) 70%, var(--ground))"/></g>' +
+      '</g></svg>' +
+      '<div class="words" style="left:160px;top:130px;width:1600px;text-align:center;align-items:center"><p class="step oracion-step">Oración de entrega</p></div>' +
+      '<div class="words oracion-l" style="' + W + '"><p class="pray">Señor Jesús, yo te recibo hoy como mi único y suficiente salvador personal,</p></div>' +
+      '<div class="words oracion-l" style="' + W + '"><p class="pray">Creo que eres Dios, que moriste en la cruz y que resucitaste al tercer día,</p></div>' +
+      '<div class="words oracion-l" style="' + W + '"><p class="pray">Me arrepiento, soy pecador, perdóname Señor,</p></div>' +
+      '<div class="words oracion-l" style="' + W + '"><p class="pray">Gracias doy al Padre por enviar a su hijo Jesucristo a morir en mi lugar,</p></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.step = q('.oracion-step').style;
+    this.glow = q('.oracion-glow').style;
+    this.ink = q('.oracion-ink').style;
+    for (const k of ['soil', 'gnd', 'mound', 'mi', 'plant', 'stem', 'bud', 'head', 'core']) this[k] = q('.oracion-' + k).style;
+    for (const e of kit.stage.querySelectorAll('.oracion-plant .ink, .oracion-plant .hatch')) e.style.strokeDashoffset = 0;
+    this.seed = q('.oracion-seed');
+    this.leaves = [...kit.stage.querySelectorAll('.oracion-leaf')].map(e => e.style);
+    this.petals = [...kit.stage.querySelectorAll('.oracion-petal')].map(e => e.style);
+    this.l = [...kit.stage.querySelectorAll('.oracion-l')];
+    this.p = this.l.map(w => w.querySelector('.pray'));
+    this.ls = this.l.map(w => w.style);
+  },
+  render(t) {
+    this.step.opacity = eo(seg(t, 0.2, 0.8));
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    this.gnd.strokeDashoffset = 1 - eo(seg(t, 0.3, 1.0));
+    this.soil.opacity = eo(seg(t, 0.6, 1.2));
+    const fall = ei(seg(t, 1.0, 2.2));
+    const bounce = t > 2.2 ? 18 * Math.abs(Math.sin((t - 2.2) * 9)) * Math.exp(-(t - 2.2) * 6) : 0;
+    this.seed.setAttribute('transform', 'translate(960 ' + (lerp(260, 942, fall) - bounce) + ') rotate(' + lerp(-30, 200, fall) + ')');
+    this.seed.style.opacity = eo(seg(t, 0.8, 1.0)) * (1 - eo(seg(t, 3.0, 3.4)));
+    this.mi.strokeDashoffset = 1 - eo(seg(t, 2.8, 3.3));
+    this.mound.opacity = eo(seg(t, 3.0, 3.5));
+    const grow = 0.45 * eo(seg(t, 6.2, 9.0)) + 0.43 * eo(seg(t, 11.9, 13.6)) + 0.12 * eo(seg(t, 16.2, 16.8));
+    this.stem.strokeDashoffset = 1 - grow;
+    this.leaves[0].transform = 'scale(' + eob(seg(t, 8.0, 9.0), 1.5) + ')';
+    this.leaves[1].transform = 'scale(' + eob(seg(t, 12.8, 13.6), 1.5) + ')';
+    this.bud.transform = 'scale(' + eob(seg(t, 13.4, 14.2), 1.5) + ')';
+    this.bud.opacity = 1 - eo(seg(t, 16.4, 17.0));
+    this.core.transform = 'scale(' + eob(seg(t, 16.3, 16.9), 1.4) + ')';
+    this.petals.forEach((s, i) => { s.transform = 'scale(' + eob(seg(t, 16.4 + i * 0.11, 17.0 + i * 0.11), 1.5) + ')'; });
+    this.head.transform = 'rotate(' + (Math.sin(t * 0.9) * 2) + 'deg)';
+    this.plant.transform = 'rotate(' + (Math.sin(t * 1.1) * 1.2) + 'deg)';
+    this.glow.opacity = lerp(0.06, 0.7, eo(seg(t, 15, 20.5)));
+    L.forEach(([a, b], i) => {
+      TextFx.fadeFromRight(this.p[i], t, a);
+      const out = eo(seg(t, b, b + 0.45));
+      this.ls[i].opacity = 1 - out;
+      this.ls[i].transform = 'translateX(' + (-30 * out) + 'px)';
+    });
+  },
+});
+}
+
+{ /* Amén — el sol sale detrás del girasol */
+const { seg, eo, lerp, TextFx } = kit;
+kit.scene('amen', {
+  init(kit) {
+    kit.stage.append(kit.h('<div class="ground"><div class="glow amen-glow"></div>' +
+      '<svg class="art" viewBox="0 0 1920 1080"><defs><clipPath id="amen-clip"><rect x="0" y="0" width="1920" height="976"/></clipPath></defs>' +
+      '<g clip-path="url(#amen-clip)"><g class="amen-sun">' +
+      '<path class="ink thin warm amen-rays" pathLength="1" d="M960 740 L1300 540 M960 740 L620 540 M960 740 L1360 740 M960 740 L560 740 M960 740 L1180 500 M960 740 L740 500 M960 740 L1300 900 M960 740 L620 900"/>' +
+      '<circle class="wash sun amen-sw" cx="960" cy="740" r="220"/><circle class="ink warm amen-si" pathLength="1" cx="960" cy="740" r="220"/></g></g>' +
+      '<g class="amen-ink">' + UI.flower('amen') + '</g></svg>' +
+      '<div class="words" style="left:160px;top:330px;width:1600px;text-align:center;align-items:center"><h2 class="line">En Cristo Jesús mi Salvador, Amén</h2></div>' +
+      '<div class="rule amen-rule" style="left:760px;top:470px;width:400px"></div></div>'));
+    const q = s => kit.stage.querySelector(s);
+    this.line = q('.line');
+    this.rule = q('.amen-rule').style;
+    this.glow = q('.amen-glow').style;
+    this.ink = q('.amen-ink').style;
+    this.sun = q('.amen-sun');
+    this.sw = q('.amen-sw').style;
+    this.si = q('.amen-si').style;
+    this.rays = q('.amen-rays');
+    this.plant = q('.amen-plant').style;
+    this.head = q('.amen-head').style;
+    q('.amen-bud').style.opacity = 0;
+    for (const e of kit.stage.querySelectorAll('.amen-plant .ink, .amen-plant .hatch, .amen-gnd, .amen-mi')) e.style.strokeDashoffset = 0;
+  },
+  render(t) {
+    TextFx.fadeFromRight(this.line, t, 0.1);
+    this.rule.transform = 'scaleX(' + eo(seg(t, 1.2, 1.8)) + ')';
+    this.ink.transform = UI.J[Math.floor(t * 12) % 3];
+    const rise = lerp(430, 0, eo(seg(t, 0.3, 2.6))) + Math.sin(t * 1.1) * 3;
+    this.sun.setAttribute('transform', 'translate(0 ' + rise + ')');
+    this.si.strokeDashoffset = 1 - eo(seg(t, 0.5, 1.5));
+    this.sw.opacity = eo(seg(t, 0.9, 1.8));
+    this.rays.style.strokeDashoffset = 1 - eo(seg(t, 1.9, 3.1));
+    this.rays.setAttribute('transform', 'rotate(' + (t * 2) + ' 960 740)');
+    this.head.transform = 'rotate(' + (Math.sin((t + 21) * 0.9) * 2) + 'deg)';
+    this.plant.transform = 'rotate(' + (Math.sin((t + 21) * 1.1) * 1.2) + 'deg)';
+    this.glow.opacity = lerp(0.3, 0.85, eo(seg(t, 0.5, 3.2)));
+  },
+});
+}
+
+/* ====================== REPRODUCTOR ====================== */
+(function () {
+  const player = document.getElementById('player'), frame = document.getElementById('frame'), stage = document.getElementById('stage');
+  const big = document.getElementById('big'), pp = document.getElementById('pp'), bar = document.getElementById('bar'), fill = document.getElementById('fill'), timeEl = document.getElementById('time');
+  const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M5 3l15 9-15 9z"/></svg>', ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+  const TOTAL = SCENES.reduce((a, s) => a + s.dur, 0);
+  const starts = []; let acc = 0;
+  for (const s of SCENES) { starts.push(acc); acc += s.dur; }
+  const kits = [], divs = [];
+  const audio = AUDIO_SRC ? new Audio(AUDIO_SRC) : null;
+  if (audio) audio.preload = 'auto';
+
+  function build() {
+    SCENES.forEach((s, i) => {
+      const d = document.createElement('div'); d.className = 'scene'; stage.appendChild(d); divs.push(d);
+      const k = Object.assign({}, kit, { stage: d, dur: s.dur, start: starts[i] }); kits.push(k);
+      const def = DEFS[s.id]; if (def && def.init) def.init.call(def, k);
+      const tick = document.createElement('div'); tick.className = 'tick'; tick.style.left = (starts[i] / TOTAL * 100) + '%'; tick.title = s.name; bar.appendChild(tick);
+    });
+  }
+  let cur = -1;
+  function show(T) {
+    let i = SCENES.length - 1;
+    for (let j = 0; j < SCENES.length; j++) if (T < starts[j] + SCENES[j].dur) { i = j; break; }
+    if (i !== cur) { divs.forEach((d, j) => d.classList.toggle('on', j === i)); cur = i; }
+    const def = DEFS[SCENES[i].id];
+    const real = Math.min(T - starts[i], SCENES[i].dur), sync = SYNC && SYNC.scenes[SCENES[i].id];
+    REAL = real;
+    if (def) def.render.call(def, sync ? warp(sync.anchors, real) : real, kits[i]);
+    if (sync) for (const [name, at] of Object.entries(sync.marks)) kits[i].stage.querySelector('.' + name).style.opacity = eo(seg(real, at - 0.1, at + 0.4));
+  }
+  function fit() {
+    const W = player.clientWidth, H = player.clientHeight, s = Math.min(W / 1920, H / 1080);
+    frame.style.transform = 'translate(' + ((W - 1920 * s) / 2) + 'px,' + ((H - 1080 * s) / 2) + 'px) scale(' + s + ')';
+  }
+  const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+  let T = 0, playing = false, last = 0;
+  function ui() {
+    fill.style.width = (T / TOTAL * 100) + '%';
+    timeEl.textContent = fmt(T) + ' / ' + fmt(TOTAL);
+    pp.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
+    big.classList.toggle('hide', playing);
+    player.classList.toggle('paused', !playing);
+  }
+  function play() {
+    if (T >= TOTAL) T = 0;
+    playing = true; last = performance.now();
+    if (audio) { audio.currentTime = T; audio.play().catch(() => { playing = false; ui(); }); }
+    ui();
+  }
+  function pause() { playing = false; if (audio) audio.pause(); ui(); }
+  function seek(t) { T = Math.max(0, Math.min(TOTAL, t)); if (audio) audio.currentTime = T; show(T); ui(); }
+  function loop(now) {
+    if (playing) {
+      if (audio && !audio.paused) T = audio.currentTime;
+      else T += Math.min(0.1, (now - last) / 1000);
+      last = now;
+      if (T >= TOTAL) { T = TOTAL; playing = false; if (audio) audio.pause(); }
+      show(T); ui();
+    }
+    requestAnimationFrame(loop);
+  }
+  big.addEventListener('click', play);
+  pp.addEventListener('click', () => playing ? pause() : play());
+  stage.addEventListener('click', () => playing ? pause() : play());
+  let drag = false;
+  const barSeek = e => { const r = bar.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * TOTAL); };
+  bar.addEventListener('pointerdown', e => { drag = true; bar.setPointerCapture(e.pointerId); barSeek(e); });
+  bar.addEventListener('pointermove', e => { if (drag) barSeek(e); });
+  bar.addEventListener('pointerup', () => { drag = false; });
+  player.addEventListener('touchstart', () => player.classList.add('touch'), { passive: true });
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); playing ? pause() : play(); }
+    else if (e.code === 'ArrowRight') seek(T + 5);
+    else if (e.code === 'ArrowLeft') seek(T - 5);
+  });
+  window.addEventListener('resize', fit);
+  window.PLAYER = { play, pause, seek, get time() { return T; }, get duration() { return TOTAL; } };
+
+  build(); fit();
+  const start = () => { show(0); ui(); requestAnimationFrame(loop); if (AUTOPLAY) play(); };
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start);
+})();
+</script>
+</body>
+</html>
