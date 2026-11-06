@@ -191,6 +191,7 @@ def main():
     else:
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(voice), "-ac", "1", "-b:a", "96k",
                         "-af", "asetnsamples=n=1152:p=0", str(AUDIO)], check=True)
+    sync["audio"] = f"{AUDIO.name}?v={hashlib.sha256(AUDIO.read_bytes()).hexdigest()[:10]}"
     block = "/* NARRACION:INICIO */\nconst SYNC = " + json.dumps(sync, ensure_ascii=False, separators=(",", ":")) + ";\n/* NARRACION:FIN */"
     html = re.sub(r"/\* NARRACION:INICIO \*/.*?/\* NARRACION:FIN \*/", lambda _: block, html, flags=re.S)
     HTML.write_text(html, encoding="utf-8")
